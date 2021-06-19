@@ -1,6 +1,6 @@
 import axios from 'axios'
 // const devBase = 'http://ctf.com:8080' // 开发环境
-const devBase = 'http://123.57.62.143:1980' // 开发环境
+const devBase = 'http://192.168.10.160:8000' // 开发环境
 export const base =  devBase
 
 axios.interceptors.response.use(

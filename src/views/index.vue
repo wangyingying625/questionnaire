@@ -1,33 +1,47 @@
 <template>
-  <a-locale-provider :locale="zh_CN">
+  <div>
+    <myNav></myNav>
   <div class="content">
+<!--      <a-locale-provider :locale="zh_CN">-->
     <h2 class="head">浙江省档案馆团队参观预约登记</h2>
-  <a-form  class="container" :form="form" :label-col="{ span: 5 }" :wrapper-col="{ span: 12 }">
-    <a-form-item label="1.单位名称">
-      <a-input v-model="name_entity"/>
+  <a-form :form="form" class="container" :label-col="{ span: 5 }" :wrapper-col="{ span: 12 }" @submit="submit">
+    <a-form-item label="入馆日期">
+      <a-date-picker :disabled-date="disabledDate" v-decorator="[
+            'in_library_date',
+            {
+              rules: [{ required: true, message: '请输入入馆日期' }],
+            },
+          ]" format="YYYY-MM-DD" @change="onChange1"/>
     </a-form-item>
-    <a-form-item label="2.参观人数">
-      <a-input  v-model="attendance"/>
+    <a-form-item label="入馆时段">
+      <a-time-picker v-decorator="[
+            'in_library_time_in',
+            {
+              rules: [{ required: true, message: '请输入入馆时段' }],
+            },
+          ]" format="HH:mm" @change="onChange"/>
     </a-form-item>
-    <a-form-item label="3.领队姓名">
-      <a-input v-model="leader_name"/>
-    </a-form-item>
-    <a-form-item label="4.领队手机号码">
-      <a-input v-model="manager_mobile_phone_number"/>
-    </a-form-item>
-    <a-form-item label="5.入馆日期">
-      <a-date-picker  :in_library_date="moment( 'YYYY-MM-DD')"/>
-    </a-form-item>
-    <a-form-item label="6.入馆时段">
-      <a-time-picker  :in_library_time_in="moment('00:00', 'HH:mm')" format="HH:mm"/>
-      <a-time-picker  :in_library_time_out="moment('00:00', 'HH:mm')" format="HH:mm"/>
-    </a-form-item>
+    <div class="list" v-for="(item,index) in list" :key="index">
+      <p style="position: absolute;left: 15px;top: 10px">成员{{index+1}}</p>
+      <p style="position: absolute;right: 15px;top: 10px;cursor: pointer" @click="del(index)"><a-icon type="close-circle" /></p>
+      <a-form-item label="姓名">
+        <a-input  v-model=item.name />
+      </a-form-item>
+      <a-form-item label="手机号">
+        <a-input  v-model=item.phone />
+      </a-form-item>
+      <a-form-item label="身份证号">
+        <a-input v-model=item.id_number />
+      </a-form-item>
+    </div>
+    <a-button type="primary" @click="addList"> <a-icon type="plus" /> 添加一个成员 </a-button>
   </a-form>
   <a-button type="primary" v-on:click="submit">
     提交
   </a-button>
+<!--          </a-locale-provider>-->
  </div>
-  </a-locale-provider>
+  </div>
 </template>
 
 <script>
@@ -35,39 +49,74 @@
   import moment from 'moment';
   import 'moment/locale/zh-cn';
   import { submitInfo } from "@/api/list";
+  import myNav from '../components/nav'
   export default {
     data(){
       return{
         zh_CN,
+        current: 'yuyue',
         in_library_date:'',
-        attendance:'',
-        manager_mobile_phone_number:'',
-        leader_name:'',
-        name_entity:'',
+        list:[],
+        date: '',
+        time:'',
         in_library_time_in:'',
-        in_library_time_out:''
+        form: this.$form.createForm(this, {name: 'coordinated'}),
       }
     },
-    methods:{
-      async submit(){
-        console.log('submit')
-        let parms={
-          in_library_date:this.in_library_date,
-          attendance:this.attendance,
-          manager_mobile_phone_number:this.manager_mobile_phone_number,
-          leader_name:this.leader_name,
-          name_entity:this.name_entity,
-          in_library_time_in:this.in_library_time_in,
-          in_library_time_out:this.in_library_time_out
+    components: {
+      myNav
+    },
+    methods: {
+      disabledDate(current) {
+        let dataDis= current > moment().add(3, 'days').endOf('day') || current < moment().subtract(1, 'days').endOf('day')
+        return dataDis
+      },
+      async submit(e) {
+        e.preventDefault()
+        console.log(this.form)
+        let params = {
+          members:this.list
         }
-        console.log(parms)
-        const res = await submitInfo(parms);
-        console.log(res)
-        this.$router.push({
-          path: '/success',
-        })
+        this.form.validateFields((err, values) => {
+          if (!err) {
+            console.log('Received values of form: ', values);
+            params = values
+          }
+        });
+        let in_library_date = this.time + ' '+this.date
+        console.log(in_library_date)
+        params.in_library_date = in_library_date
+        params.members=this.list
+        const res = await submitInfo(params);
+        if (res.data.status == "success") {
+          this.$router.push({
+            path: '/success',
+          })
+        } else {
+          alert(res.data.reason)
+        }
       },
       moment,
+      onChange(value, dateString) {
+        this.date = dateString
+        // console.log(this.date)
+      },
+      onChange1(value, dateString) {
+        this.time = dateString
+        // console.log(this.time)
+      },
+      del(index){
+        console.log("del")
+        this.list.splice(index, 1);
+      },
+      addList(){
+        let temp={
+          name: "",
+          id_number: "",
+          phone: ""
+        }
+        this.list.push(temp)
+      }
     }
   }
 </script>
@@ -75,12 +124,14 @@
 <style lang="less" scoped>
   .content{
     padding-bottom: 30px;
+    margin-top: 30px;
     .head {
       margin-bottom: 80px;
       padding-bottom: 30px;
       border-bottom: 3px solid #53a4f4;
     }
     .container {
+
       padding: 0 30px;
       padding-bottom: 20px;
     /deep/ .ant-form-item {
@@ -91,10 +142,29 @@
     }
       .ant-time-picker{
         margin-right: 20px;
+        width: 100%;
       }
     .ant-calendar-picker {
       width: 100%;
     }
+      .ant-btn{
+        width: 100%;
+      }
+      .list{
+        /*text-align: left;*/
+        position: relative;
+        border: 1px solid rgba(0, 0, 0, 0.25);
+        margin-bottom: 15px;
+        padding: 15px;
+        padding-top: 40px;
+        border-radius: 10px;
+        /deep/ .ant-form-item {
+          margin-bottom: 20px;
+          label{
+            font-size: 20px;
+          }
+        }
+      }
   }
   }
 </style>
