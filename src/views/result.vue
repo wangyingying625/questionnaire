@@ -1,6 +1,6 @@
 <template>
   <a-table :columns="columns" :data-source="data" rowKey="id" >
-    <a slot="action" slot-scope="text" @click="del(text)">删除</a>
+    <a slot="action" slot-scope="text" @click="showConfirm(text)">删除</a>
     <a slot="view" slot-scope="text" @click="see(text)">查看</a>
   </a-table>
 </template>
@@ -27,7 +27,6 @@
     },
     mounted() {
       this.info=this.$route.query.info
-      console.log(this.info)
       var msg=[]
       msg.push({
         id:this.info.surveys[0].id,
@@ -47,25 +46,23 @@
           })
         }
       }
-      console.log(msg,'msg')
       this.data=msg
-      console.log(this.data)
     },
     methods:{
-      async del(index){
+      async del(index,th){
         let params=index
         const res = await delInfo(params);
        if (res.data.status == "success"){
-         this.$message.info('删除成功');
+         th.$message.info('删除成功');
        }
 
         let params1={
-          id_number: this.info.id_number,
-          name: this.info.name,
-          phone: this.info.phone,
+          id_number: th.info.id_number,
+          name: th.info.name,
+          phone: th.info.phone,
         }
         const res1 = await searchInfo(params1);
-        if(res.data.status == "success"){
+        if(res1.data.status == "success"){
           var msg1=[]
           msg1.push({
             id:res1.data.survey.surveys[0].id,
@@ -85,12 +82,23 @@
               })
             }
           }
-          this.data=msg1
+          th.data=msg1
         }
         else {
           console.log('else')
-          this.data=[]
+          th.data=[]
         }
+      },
+      showConfirm(index) {
+        var that=this
+        this.$confirm({
+          title: '确认删除预约信息吗?',
+          content: '预约信息删除后不可恢复',
+          onOk() {
+            that.del(index,that)
+          },
+          onCancel() {},
+        });
       },
       async see(index){
         let par=index
